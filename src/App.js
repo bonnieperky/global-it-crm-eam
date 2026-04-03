@@ -122,7 +122,7 @@ const styles = {
   accountItem: {
     border: "1px solid #e2e8f0",
     borderRadius: 14,
-    padding: 14,
+    padding: 12,
     marginBottom: 10,
     cursor: "pointer"
   },
@@ -686,12 +686,12 @@ export default function App() {
                   onClick={() => setSelectedId(account.id)}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                    <div>
-                      <div style={{ fontWeight: 700 }}>{account.name}</div>
-                      <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>
-                        {account.region} · {account.industry}
-                      </div>
-                    </div>
+                   <div>
+  <div style={{ fontWeight: 700 }}>{account.name}</div>
+  <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>
+    {account.region || "-"} · {account.industry || "-"}
+  </div>
+</div>
                     <span style={{ ...styles.badge, ...priorityColor(account.priority) }}>
                       {account.priority}
                     </span>
@@ -700,9 +700,6 @@ export default function App() {
                     <span style={{ ...styles.badge, ...stageColor(account.stage) }}>
                       {account.stage}
                     </span>
-                  </div>
-                  <div style={{ marginTop: 10, fontSize: 13, color: "#475569" }}>
-                    {account.needs}
                   </div>
                 </div>
               ))
@@ -746,33 +743,33 @@ export default function App() {
 
                 <div style={styles.detailBox}>
                   <div style={styles.sectionTitle}>핵심 니즈</div>
-                  <div>{selected.needs}</div>
+                 <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{selected.needs}</div>
                 </div>
 
                 <div style={styles.detailBox}>
                   <div style={styles.sectionTitle}>경쟁사</div>
-                  <div>{selected.competitors}</div>
+                 <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{selected.competitors}</div>
                 </div>
 
                 <div style={styles.detailBox}>
                   <div style={styles.sectionTitle}>주요 솔루션 설명</div>
-                  <div>{selected.solutions}</div>
+                <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{selected.solutions}</div>
                 </div>
 
                 <div style={styles.grid2}>
                   <div style={styles.detailBox}>
                     <div style={styles.sectionTitle}>담당자</div>
-                    <div>{selected.contacts}</div>
+               <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{selected.contacts}</div>
                   </div>
                   <div style={styles.detailBox}>
                     <div style={styles.sectionTitle}>다음 액션</div>
-                    <div>{selected.nextAction}</div>
+              <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{selected.nextAction}</div>
                   </div>
                 </div>
 
                 <div style={styles.detailBox}>
                   <div style={styles.sectionTitle}>현황 메모</div>
-                  <div>{selected.notes}</div>
+                 <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{selected.notes}</div>
                   <div style={{ marginTop: 12 }}>
                     {(selected.tags || []).map((tag) => (
                       <span
