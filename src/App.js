@@ -170,7 +170,7 @@ const styles = {
 function stageColor(stage) {
   if (stage === "접촉중") return { background: "#dbeafe", color: "#1d4ed8" };
   if (stage === "제안준비") return { background: "#fef3c7", color: "#b45309" };
-  if (stage === "협의중") return { background: "#ede9fe", color: "#6d28d9" };
+  if (stage === "계약") return { background: "#ede9fe", color: "#6d28d9" };
   if (stage === "종료") return { background: "#dcfce7", color: "#15803d" };
   return { background: "#e2e8f0", color: "#334155" };
 }
@@ -268,7 +268,7 @@ export default function App() {
 
   const highPriorityCount = accounts.filter((a) => a.priority === "High").length;
   const activeCount = accounts.filter((a) =>
-    ["접촉중", "제안준비", "협의중"].includes(a.stage)
+    ["접촉중", "제안준비", "계약"].includes(a.stage)
   ).length;
 
   const resetForm = () => {
@@ -560,7 +560,7 @@ export default function App() {
                 <option>초기검토</option>
                 <option>접촉중</option>
                 <option>제안준비</option>
-                <option>협의중</option>
+                <option>계약</option>
                 <option>종료</option>
               </select>
               <select
@@ -596,7 +596,7 @@ export default function App() {
             <div style={styles.grid2}>
               <input
                 style={styles.input}
-                placeholder="주요 컨택"
+                placeholder="담당자"
                 value={form.contacts}
                 onChange={(e) => setForm({ ...form, contacts: e.target.value })}
               />
@@ -669,7 +669,7 @@ export default function App() {
               <option>초기검토</option>
               <option>접촉중</option>
               <option>제안준비</option>
-              <option>협의중</option>
+              <option>계약</option>
               <option>종료</option>
             </select>
 
@@ -761,7 +761,7 @@ export default function App() {
 
                 <div style={styles.grid2}>
                   <div style={styles.detailBox}>
-                    <div style={styles.sectionTitle}>주요 컨택</div>
+                    <div style={styles.sectionTitle}>담당자</div>
                     <div>{selected.contacts}</div>
                   </div>
                   <div style={styles.detailBox}>
