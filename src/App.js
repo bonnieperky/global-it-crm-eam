@@ -4,14 +4,11 @@ import { supabase } from "./supabaseClient";
 export default function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   const [accounts, setAccounts] = useState([]);
   const [name, setName] = useState("");
 
-  // 로그인 상태 확인
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
@@ -20,37 +17,33 @@ export default function App() {
 
     const {
       data: { subscription }
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  // 데이터 가져오기
   useEffect(() => {
-    if (session) fetchAccounts();
+    if (session) {
+      fetchAccounts();
+    }
   }, [session]);
 
   const fetchAccounts = async () => {
-    const { data, error } = await supabase.from("accounts").select("*");
+    const { data, error } = await supabase
+      .from("accounts")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-    if (!error) setAccounts(data);
-  };
-
-  // 고객 추가
-  const addAccount = async () => {
-    if (!name) return;
-
-    const { error } = await supabase.from("accounts").insert({ name });
-
-    if (!error) {
-      setName("");
-      fetchAccounts();
+    if (error) {
+      alert("고객 목록을 불러오지 못했어요.");
+      return;
     }
+
+    setAccounts(data || []);
   };
 
-  // 로그인
   const signIn = async () => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -59,64 +52,82 @@ export default function App() {
     if (error) alert(error.message);
   };
 
-  // 회원가입
   const signUp = async () => {
     const { error } = await supabase.auth.signUp({
       email,
       password
     });
-    if (error) alert(error.message);
+    if (error) {
+      alert(error.message);
+    } else {
+      alert("회원가입 요청 완료");
+    }
   };
 
-  // 로그아웃
   const signOut = async () => {
     await supabase.auth.signOut();
   };
 
-  if (loading) return <div>로딩중...</div>;
+  const addAccount = async () => {
+    if (!name.trim()) return;
 
-  // 로그인 안된 상태
+    const { error } = await supabase.from("accounts").insert({
+      name: name
+    });
+
+    if (error) {
+      alert("고객 추가 실패");
+      return;
+    }
+
+    setName("");
+    fetchAccounts();
+  };
+
+  if (loading) {
+    return <div style={{ padding: 40 }}>로딩 중...</div>;
+  }
+
   if (!session) {
     return (
       <div style={{ padding: 40 }}>
         <h2>팀 CRM 로그인</h2>
-
         <input
+          style={{ display: "block", marginBottom: 10, padding: 8 }}
           placeholder="이메일"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
-        <br />
         <input
           type="password"
+          style={{ display: "block", marginBottom: 10, padding: 8 }}
           placeholder="비밀번호"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
-        <br />
-
-        <button onClick={signIn}>로그인</button>
+        <button onClick={signIn} style={{ marginRight: 8 }}>
+          로그인
+        </button>
         <button onClick={signUp}>회원가입</button>
       </div>
     );
   }
 
-  // 로그인 된 상태
   return (
     <div style={{ padding: 40 }}>
       <h1>CRM</h1>
-
       <button onClick={signOut}>로그아웃</button>
 
-      <h3>고객 추가</h3>
+      <h3 style={{ marginTop: 24 }}>고객 추가</h3>
       <input
+        style={{ marginRight: 8, padding: 8 }}
         placeholder="고객명"
         value={name}
         onChange={(e) => setName(e.target.value)}
       />
       <button onClick={addAccount}>추가</button>
 
-      <h3>고객 목록</h3>
+      <h3 style={{ marginTop: 24 }}>고객 목록</h3>
       <ul>
         {accounts.map((a) => (
           <li key={a.id}>{a.name}</li>
