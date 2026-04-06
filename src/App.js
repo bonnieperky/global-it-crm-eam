@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
 
 const initialForm = {
@@ -20,9 +20,9 @@ const initialForm = {
 export default function App() {
   const [session, setSession] = useState(null);
   const [accounts, setAccounts] = useState([]);
-  const [form, setForm] = useState(initialForm);
-  const [showForm, setShowForm] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState(initialForm);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,29 +31,56 @@ export default function App() {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
     });
+
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
-    if (session) fetchAccounts();
+    if (session) {
+      fetchAccounts();
+    }
   }, [session]);
 
   const fetchAccounts = async () => {
-    const { data } = await supabase.from("accounts").select("*");
+    const { data, error } = await supabase
+      .from("accounts")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      alert("고객 목록을 불러오지 못했어요.");
+      return;
+    }
 
     const mapped = (data || []).map((item) => ({
       ...item,
       nextAction: item.next_action || "",
       meetingLink: item.meeting_link || "",
-      tags: item.tags || []
+      tags: Array.isArray(item.tags) ? item.tags : []
     }));
 
     setAccounts(mapped);
-    if (mapped.length > 0) setSelectedId(mapped[0].id);
+    if (mapped.length > 0) {
+      setSelectedId(mapped[0].id);
+    } else {
+      setSelectedId(null);
+    }
   };
 
-  const selected = accounts.find((a) => a.id === selectedId);
+  const selected = accounts.find((a) => a.id === selectedId) || null;
 
   const saveAccount = async () => {
+    if (!form.name.trim()) {
+      alert("고객명을 입력해 주세요.");
+      return;
+    }
+
     const payload = {
       name: form.name,
       region: form.region,
@@ -67,100 +94,285 @@ export default function App() {
       notes: form.notes,
       meeting_link: form.meetingLink,
       next_action: form.nextAction,
-      tags: form.tags.split(",").map((t) => t.trim())
+      tags: String(form.tags || "")
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean)
     };
 
-    await supabase.from("accounts").insert(payload);
+    const { error } = await supabase.from("accounts").insert(payload);
 
-    setShowForm(false);
+    if (error) {
+      alert("저장에 실패했어요.");
+      return;
+    }
+
     setForm(initialForm);
+    setShowForm(false);
     fetchAccounts();
   };
 
   const handleSignIn = async () => {
-    await supabase.auth.signInWithPassword({ email, password });
-    window.location.reload();
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error) {
+      alert(error.message);
+    }
   };
 
   const handleSignUp = async () => {
-    await supabase.auth.signUp({ email, password });
-    alert("회원가입 완료");
+    const { error } = await supabase.auth.signUp({
+      email,
+      password
+    });
+
+    if (error) {
+      alert(error.message);
+    } else {
+      alert("회원가입이 완료됐어요.");
+    }
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
   };
 
   if (!session) {
     return (
       <div style={{ padding: 40 }}>
-        <h2>로그인</h2>
-        <input placeholder="email" onChange={(e) => setEmail(e.target.value)} />
-        <input
-          type="password"
-          placeholder="pw"
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        <button onClick={handleSignIn}>로그인</button>
+        <h2>팀 CRM 로그인</h2>
+        <div style={{ marginBottom: 12 }}>
+          <input
+            style={{ padding: 8, width: 260 }}
+            placeholder="이메일"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
+        <div style={{ marginBottom: 12 }}>
+          <input
+            type="password"
+            style={{ padding: 8, width: 260 }}
+            placeholder="비밀번호"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
+        <button onClick={handleSignIn} style={{ marginRight: 8 }}>
+          로그인
+        </button>
         <button onClick={handleSignUp}>회원가입</button>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: 30 }}>
+    <div style={{ padding: 30, fontFamily: "Arial, sans-serif" }}>
       <h1>CRM</h1>
-
-      <button onClick={() => setShowForm(true)}>고객 추가</button>
+      <button onClick={handleSignOut}>로그아웃</button>
+      <button onClick={() => setShowForm(true)} style={{ marginLeft: 8 }}>
+        고객 추가
+      </button>
 
       {showForm && (
-        <div style={{ marginTop: 20 }}>
-          <input placeholder="고객명" onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          <input placeholder="Region" onChange={(e) => setForm({ ...form, region: e.target.value })} />
-          <input placeholder="Industry" onChange={(e) => setForm({ ...form, industry: e.target.value })} />
+        <div
+          style={{
+            marginTop: 20,
+            padding: 16,
+            border: "1px solid #ddd",
+            borderRadius: 8
+          }}
+        >
+          <h3>새 고객 등록</h3>
 
-          <textarea placeholder="핵심 니즈" onChange={(e) => setForm({ ...form, needs: e.target.value })} />
-          <textarea placeholder="경쟁사" onChange={(e) => setForm({ ...form, competitors: e.target.value })} />
-          <textarea placeholder="솔루션" onChange={(e) => setForm({ ...form, solutions: e.target.value })} />
+          <div style={{ marginBottom: 10 }}>
+            <input
+              style={{ width: 300, padding: 8 }}
+              placeholder="고객명"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+            />
+          </div>
 
-          <input placeholder="주요 컨택" onChange={(e) => setForm({ ...form, contacts: e.target.value })} />
-          <input placeholder="다음 액션" onChange={(e) => setForm({ ...form, nextAction: e.target.value })} />
+          <div style={{ marginBottom: 10 }}>
+            <input
+              style={{ width: 300, padding: 8, marginRight: 8 }}
+              placeholder="Region"
+              value={form.region}
+              onChange={(e) => setForm({ ...form, region: e.target.value })}
+            />
+            <input
+              style={{ width: 300, padding: 8 }}
+              placeholder="Industry"
+              value={form.industry}
+              onChange={(e) => setForm({ ...form, industry: e.target.value })}
+            />
+          </div>
 
-          <input
-            placeholder="회의록 링크"
-            onChange={(e) => setForm({ ...form, meetingLink: e.target.value })}
-          />
+          <div style={{ marginBottom: 10 }}>
+            <select
+              style={{ width: 150, padding: 8, marginRight: 8 }}
+              value={form.stage}
+              onChange={(e) => setForm({ ...form, stage: e.target.value })}
+            >
+              <option>초기검토</option>
+              <option>접촉중</option>
+              <option>제안준비</option>
+              <option>협의중</option>
+              <option>종료</option>
+            </select>
 
-          <textarea placeholder="메모" onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+            <select
+              style={{ width: 150, padding: 8 }}
+              value={form.priority}
+              onChange={(e) => setForm({ ...form, priority: e.target.value })}
+            >
+              <option>High</option>
+              <option>Medium</option>
+              <option>Low</option>
+            </select>
+          </div>
 
-          <button onClick={saveAccount}>저장</button>
+          <div style={{ marginBottom: 10 }}>
+            <textarea
+              style={{ width: 620, height: 70, padding: 8 }}
+              placeholder="핵심 니즈"
+              value={form.needs}
+              onChange={(e) => setForm({ ...form, needs: e.target.value })}
+            />
+          </div>
+
+          <div style={{ marginBottom: 10 }}>
+            <textarea
+              style={{ width: 620, height: 70, padding: 8 }}
+              placeholder="경쟁사"
+              value={form.competitors}
+              onChange={(e) => setForm({ ...form, competitors: e.target.value })}
+            />
+          </div>
+
+          <div style={{ marginBottom: 10 }}>
+            <textarea
+              style={{ width: 620, height: 70, padding: 8 }}
+              placeholder="주요 솔루션 설명"
+              value={form.solutions}
+              onChange={(e) => setForm({ ...form, solutions: e.target.value })}
+            />
+          </div>
+
+          <div style={{ marginBottom: 10 }}>
+            <input
+              style={{ width: 300, padding: 8, marginRight: 8 }}
+              placeholder="주요 컨택"
+              value={form.contacts}
+              onChange={(e) => setForm({ ...form, contacts: e.target.value })}
+            />
+            <input
+              style={{ width: 300, padding: 8 }}
+              placeholder="다음 액션"
+              value={form.nextAction}
+              onChange={(e) => setForm({ ...form, nextAction: e.target.value })}
+            />
+          </div>
+
+          <div style={{ marginBottom: 10 }}>
+            <input
+              style={{ width: 620, padding: 8 }}
+              placeholder="회의록 링크 (공유 드라이브 URL)"
+              value={form.meetingLink}
+              onChange={(e) => setForm({ ...form, meetingLink: e.target.value })}
+            />
+          </div>
+
+          <div style={{ marginBottom: 10 }}>
+            <textarea
+              style={{ width: 620, height: 70, padding: 8 }}
+              placeholder="현황 메모"
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+            />
+          </div>
+
+          <div style={{ marginBottom: 10 }}>
+            <input
+              style={{ width: 620, padding: 8 }}
+              placeholder="태그 (쉼표로 구분)"
+              value={form.tags}
+              onChange={(e) => setForm({ ...form, tags: e.target.value })}
+            />
+          </div>
+
+          <button onClick={saveAccount} style={{ marginRight: 8 }}>
+            저장
+          </button>
+          <button
+            onClick={() => {
+              setShowForm(false);
+              setForm(initialForm);
+            }}
+          >
+            취소
+          </button>
         </div>
       )}
 
-      <h3>고객 목록</h3>
-      {accounts.map((a) => (
-        <div key={a.id} onClick={() => setSelectedId(a.id)}>
-          {a.name}
-        </div>
-      ))}
+      <div style={{ marginTop: 30 }}>
+        <h3>고객 목록</h3>
+        {accounts.map((a) => (
+          <div
+            key={a.id}
+            onClick={() => setSelectedId(a.id)}
+            style={{
+              padding: 10,
+              marginBottom: 8,
+              border: "1px solid #ddd",
+              borderRadius: 8,
+              cursor: "pointer",
+              background: selectedId === a.id ? "#f3f4f6" : "#fff"
+            }}
+          >
+            <strong>{a.name}</strong>
+            <div style={{ color: "#666", fontSize: 14 }}>
+              {a.region} · {a.industry}
+            </div>
+          </div>
+        ))}
+      </div>
 
       {selected && (
-        <div style={{ marginTop: 30 }}>
+        <div
+          style={{
+            marginTop: 30,
+            padding: 16,
+            border: "1px solid #ddd",
+            borderRadius: 8
+          }}
+        >
           <h2>{selected.name}</h2>
-          <div>{selected.region} · {selected.industry}</div>
+          <div style={{ marginBottom: 12 }}>
+            {selected.region} · {selected.industry}
+          </div>
 
-          <p><b>니즈:</b> {selected.needs}</p>
-          <p><b>경쟁사:</b> {selected.competitors}</p>
-          <p><b>솔루션:</b> {selected.solutions}</p>
-          <p><b>컨택:</b> {selected.contacts}</p>
-          <p><b>다음 액션:</b> {selected.nextAction}</p>
+          <p><strong>핵심 니즈:</strong> {selected.needs}</p>
+          <p><strong>경쟁사:</strong> {selected.competitors}</p>
+          <p><strong>주요 솔루션 설명:</strong> {selected.solutions}</p>
+          <p><strong>주요 컨택:</strong> {selected.contacts}</p>
+          <p><strong>다음 액션:</strong> {selected.nextAction}</p>
+          <p><strong>현황 메모:</strong> {selected.notes}</p>
 
           <p>
-            <b>회의록:</b>{" "}
+            <strong>회의록 링크:</strong>{" "}
             {selected.meetingLink ? (
-              <a href={selected.meetingLink} target="_blank">링크 열기</a>
+              <a href={selected.meetingLink} target="_blank" rel="noreferrer">
+                링크 열기
+              </a>
             ) : (
               "없음"
             )}
           </p>
-
-          <p><b>메모:</b> {selected.notes}</p>
         </div>
       )}
     </div>
