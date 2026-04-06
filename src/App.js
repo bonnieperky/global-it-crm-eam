@@ -244,9 +244,17 @@ export default function App() {
     }
   };
 
-  const filtered = useMemo(() => {
-    return accounts.filter((a) => {
+const filtered = useMemo(() => {
+  const priorityOrder = {
+    High: 3,
+    Medium: 2,
+    Low: 1
+  };
+
+  return accounts
+    .filter((a) => {
       const matchesStage = stageFilter === "전체" || a.stage === stageFilter;
+
       const haystack = [
         a.name,
         a.region,
@@ -263,8 +271,14 @@ export default function App() {
         .toLowerCase();
 
       return matchesStage && haystack.includes(query.toLowerCase());
-    });
-  }, [accounts, query, stageFilter]);
+    })
+ .sort((a, b) => {
+  const diff = priorityOrder[b.priority] - priorityOrder[a.priority];
+  if (diff !== 0) return diff;
+
+  return new Date(b.created_at) - new Date(a.created_at);
+});
+}, [accounts, query, stageFilter]);
 
   const selected = filtered.find((a) => a.id === selectedId) || filtered[0] || null;
 
