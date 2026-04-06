@@ -272,10 +272,30 @@ const filtered = useMemo(() => {
 
       return matchesStage && haystack.includes(query.toLowerCase());
     })
- .sort((a, b) => {
-  const diff = priorityOrder[b.priority] - priorityOrder[a.priority];
-  if (diff !== 0) return diff;
+.sort((a, b) => {
+  const priorityOrder = {
+    High: 3,
+    Medium: 2,
+    Low: 1
+  };
 
+  const stageOrder = {
+    계약: 5,
+    제안준비: 4,
+    접촉중: 3,
+    초기검토: 2,
+    종료: 1
+  };
+
+  // 1️⃣ Priority 비교
+  const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
+  if (priorityDiff !== 0) return priorityDiff;
+
+  // 2️⃣ Stage 비교
+  const stageDiff = (stageOrder[b.stage] || 0) - (stageOrder[a.stage] || 0);
+  if (stageDiff !== 0) return stageDiff;
+
+  // 3️⃣ 동일하면 최신순
   return new Date(b.created_at) - new Date(a.created_at);
 });
 }, [accounts, query, stageFilter]);
