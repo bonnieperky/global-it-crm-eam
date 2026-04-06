@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { supabase } from "./supabaseClient";
 
 const initialForm = {
