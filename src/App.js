@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { supabase } from "./supabaseClient";
 
 const initialForm = {
@@ -17,6 +18,8 @@ const initialForm = {
   nextAction: "",
   tags: ""
 };
+
+const stages = ["초기검토", "접촉중", "제안준비", "계", "종료"];
 
 const styles = {
   page: {
@@ -181,7 +184,13 @@ function priorityColor(priority) {
   if (priority === "Medium") return { background: "#fef3c7", color: "#b45309" };
   return { background: "#e2e8f0", color: "#334155" };
 }
-
+function boardColor(stage) {
+  if (stage === "협의중") return "#ede9fe";
+  if (stage === "제안준비") return "#fef3c7";
+  if (stage === "접촉중") return "#dbeafe";
+  if (stage === "종료") return "#dcfce7";
+  return "#f1f5f9";
+}
 export default function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -391,6 +400,24 @@ const filtered = useMemo(() => {
     const ok = window.confirm(`${target?.name || "이 고객"} 정보를 삭제할까요?`);
     if (!ok) return;
 
+    const handleDragEnd = async (result) => {
+  if (!result.destination) return;
+
+  const movedId = result.draggableId;
+  const newStage = result.destination.droppableId;
+
+  const { error } = await supabase
+    .from("accounts")
+    .update({ stage: newStage })
+    .eq("id", movedId);
+
+  if (error) {
+    alert("단계 변경에 실패했어요.");
+    return;
+  }
+
+  await fetchAccounts();
+};
     const { error } = await supabase.from("accounts").delete().eq("id", id);
 
     if (error) {
@@ -735,6 +762,97 @@ const filtered = useMemo(() => {
   <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>
     {account.region || "-"} · {account.industry || "-"}
   </div>
+</div>
+    <div style={{ ...styles.panel, marginTop: 20 }}>
+  <h3 style={{ marginTop: 0, marginBottom: 16 }}>칸반 보드</h3>
+
+  <DragDropContext onDragEnd={handleDragEnd}>
+    <div style={{ display: "flex", gap: 16, overflowX: "auto", paddingBottom: 8 }}>
+      {stages.map((stage) => {
+        const stageItems = accounts
+          .filter((account) => account.stage === stage)
+          .sort((a, b) => {
+            const priorityOrder = { High: 3, Medium: 2, Low: 1 };
+            return (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
+          });
+
+        return (
+          <Droppable droppableId={stage} key={stage}>
+            {(provided) => (
+              <div
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                style={{
+                  minWidth: 260,
+                  width: 260,
+                  background: boardColor(stage),
+                  borderRadius: 16,
+                  padding: 12,
+                  flexShrink: 0
+                }}
+              >
+                <div
+                  style={{
+                    fontWeight: 700,
+                    marginBottom: 12,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center"
+                  }}
+                >
+                  <span>{stage}</span>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      background: "#fff",
+                      borderRadius: 999,
+                      padding: "4px 8px"
+                    }}
+                  >
+                    {stageItems.length}
+                  </span>
+                </div>
+
+                {stageItems.map((item, index) => (
+                  <Draggable key={item.id} draggableId={String(item.id)} index={index}>
+                    {(provided) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
+                        onClick={() => setSelectedId(item.id)}
+                        style={{
+                          background: "#fff",
+                          borderRadius: 14,
+                          padding: 12,
+                          marginBottom: 10,
+                          boxShadow: "0 1px 4px rgba(15, 23, 42, 0.08)",
+                          cursor: "pointer",
+                          ...provided.draggableProps.style
+                        }}
+                      >
+                        <div style={{ fontWeight: 700, marginBottom: 6 }}>{item.name}</div>
+                        <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>
+                          {item.region || "-"} · {item.industry || "-"}
+                        </div>
+                        <div>
+                          <span style={{ ...styles.badge, ...priorityColor(item.priority) }}>
+                            {item.priority}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        );
+      })}
+    </div>
+  </DragDropContext>
 </div>
                     <span style={{ ...styles.badge, ...priorityColor(account.priority) }}>
                       {account.priority}
