@@ -13,6 +13,7 @@ const initialForm = {
   solutions: "",
   contacts: "",
   notes: "",
+  meetingLink: "",
   nextAction: "",
   tags: ""
 };
@@ -231,6 +232,7 @@ export default function App() {
     const mapped = (data || []).map((item) => ({
       ...item,
       nextAction: item.next_action || "",
+      meetingLink: item.meeting_link || "",
       tags: Array.isArray(item.tags) ? item.tags : []
     }));
 
@@ -295,6 +297,7 @@ export default function App() {
       solutions: account.solutions || "",
       contacts: account.contacts || "",
       notes: account.notes || "",
+      meetingLink: account.meetingLink || account.meeting_link || "",
       nextAction: account.nextAction || "",
       tags: Array.isArray(account.tags) ? account.tags.join(", ") : ""
     });
@@ -324,6 +327,7 @@ export default function App() {
       solutions: form.solutions,
       contacts: form.contacts,
       notes: form.notes,
+      meeting_link: form.meetingLink,
       next_action: form.nextAction,
       tags: normalizedTags
     };
@@ -608,6 +612,12 @@ export default function App() {
               />
             </div>
 
+                  <input
+  style={styles.input}
+  placeholder="회의록 링크 (공유 드라이브 URL)"
+  value={form.meetingLink}
+  onChange={(e) => setForm({ ...form, meetingLink: e.target.value })}
+/>
             <textarea
               style={styles.textarea}
               placeholder="메모 / 현황"
@@ -766,7 +776,22 @@ export default function App() {
               <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{selected.nextAction}</div>
                   </div>
                 </div>
-
+<div style={styles.detailBox}>
+  <div style={styles.sectionTitle}>회의록 링크</div>
+  {selected.meetingLink ? (
+    <a
+      href={selected.meetingLink}
+      target="_blank"
+      rel="noreferrer"
+      style={{ color: "#2563eb", textDecoration: "underline" }}
+    >
+      회의록 열기
+    </a>
+  ) : (
+    <div style={{ color: "#94a3b8" }}>등록된 링크가 없습니다.</div>
+  )}
+</div>
+                      
                 <div style={styles.detailBox}>
                   <div style={styles.sectionTitle}>현황 메모</div>
                  <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{selected.notes}</div>
