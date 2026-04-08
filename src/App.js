@@ -243,8 +243,15 @@ export default function App() {
     }
   };
 
-  const filtered = useMemo(() => {
-    return accounts.filter((a) => {
+ const filtered = useMemo(() => {
+  const priorityOrder = {
+    High: 0,
+    Medium: 1,
+    Low: 2
+  };
+
+  return accounts
+    .filter((a) => {
       const matchesStage = stageFilter === "전체" || a.stage === stageFilter;
       const haystack = [
         a.name,
@@ -261,8 +268,11 @@ export default function App() {
         .toLowerCase();
 
       return matchesStage && haystack.includes(query.toLowerCase());
+    })
+    .sort((a, b) => {
+      return (priorityOrder[a.priority] ?? 99) - (priorityOrder[b.priority] ?? 99);
     });
-  }, [accounts, query, stageFilter]);
+}, [accounts, query, stageFilter]);
 
   const selected = filtered.find((a) => a.id === selectedId) || filtered[0] || null;
 
@@ -703,9 +713,7 @@ export default function App() {
                       {account.stage}
                     </span>
                   </div>
-                  <div style={{ marginTop: 10, fontSize: 13, color: "#475569" }}>
-                    {account.needs}
-                  </div>
+                
                 </div>
               ))
             )}
@@ -748,7 +756,9 @@ export default function App() {
 
                 <div style={styles.detailBox}>
                   <div style={styles.sectionTitle}>핵심 니즈</div>
-                  <div>{selected.needs}</div>
+                 <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
+  {selected.needs}
+</div>
                 </div>
 
                 <div style={styles.detailBox}>
@@ -758,7 +768,9 @@ export default function App() {
 
                 <div style={styles.detailBox}>
                   <div style={styles.sectionTitle}>주요 솔루션 설명</div>
-                  <div>{selected.solutions}</div>
+                <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
+  {selected.solutions}
+</div>
                 </div>
 
                 <div style={styles.grid2}>
